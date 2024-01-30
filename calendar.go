@@ -78,12 +78,12 @@ func GetHead() [7]string {
 func (cal Calendar) GetBody() [][]int {
 	counter := 1
 	table := make([][]int, cal.Rows)
+
 	for i := 0; i < cal.Rows; i++ {
 		table[i] = make([]int, cal.Cols)
+
 		for j := 0; j < cal.Cols; j++ {
-			if j < cal.StartDay-1 && i < 1 {
-				table[i][j] = 0
-			} else if counter > cal.TotalDays {
+			if i == 0 && j < cal.StartDay-1 || counter > cal.TotalDays {
 				table[i][j] = 0
 			} else {
 				table[i][j] = counter
