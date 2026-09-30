@@ -1,8 +1,6 @@
 package calendar
 
 import (
-	"math"
-	"strconv"
 	"time"
 )
 
@@ -10,84 +8,62 @@ type Calendar struct {
 	Year      int
 	Month     int
 	Today     time.Time
-	StartDay  int
+	StartDay  int // 0 = Mon, 1 = Tue, ..., 6 = Sun
 	TotalDays int
 	Rows      int
 	Cols      int
 }
 
-func Create(year int, month int) Calendar {
-	var c = Calendar{}
+// Create builds a new Calendar. Passing 0 for year or month defaults to the current date.
+func Create(year, month int) Calendar {
+	now := time.Now()
 
-	c.Today = time.Now()
-
-	if year == 0 {
-		c.Year = time.Now().Year()
+	if year <= 0 {
+		year = now.Year()
+	}
+	if month < 1 || month > 12 {
+		month = int(now.Month())
 	}
 
-	if month == 0 {
-		c.Month = int(time.Now().Month())
+	firstOfMonth := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+
+	// Shift Go's Sunday (0) to 6, and Monday (1) to 0
+	startOffset := (int(firstOfMonth.Weekday()) + 6) % 7
+
+	// Passing day 0 of month+1 yields the last day of month
+	totalDays := time.Date(year, time.Month(month+1), 0, 0, 0, 0, 0, time.UTC).Day()
+
+	cols := 7
+	rows := (totalDays + startOffset + cols - 1) / cols
+
+	return Calendar{
+		Year:      year,
+		Month:     month,
+		Today:     now,
+		StartDay:  startOffset,
+		TotalDays: totalDays,
+		Rows:      rows,
+		Cols:      cols,
 	}
-
-	date := time.Date(c.Year, time.Month(c.Month), 1, 0, 0, 0, 0, time.UTC)
-
-	c.StartDay = int(date.Weekday())
-	c.TotalDays = daysInMonth(&c.Year, &c.Month)
-
-	c.Rows = int(math.Ceil(float64(c.TotalDays+c.StartDay) / 7))
-	c.Cols = 7
-
-	return c
 }
 
-func daysInMonth(y *int, m *int) int {
-
-	// moth validation
-	if *m < 1 || *m > 12 {
-		*m = int(time.Now().Month())
-	}
-	// year validation
-	if *y <= 1970 && len(strconv.Itoa(*y)) != 4 {
-		*y = time.Now().Year()
-	}
-	// Leap year check
-	if *m == 2 {
-		if *y%400 == 0 || (*y%4 == 0 && *y%100 != 0) {
-			return 29
-		}
-	}
-	daysInMonth := [...]int{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
-
-	return daysInMonth[*m-1]
+func Head() [7]string {
+	return [7]string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}
 }
 
-func GetHead() [7]string {
-	head := [7]string{
-		"Mon",
-		"Tue",
-		"Wed",
-		"Thu",
-		"Fri",
-		"Sat",
-		"Sun",
-	}
-
-	return head
-}
-
-func (cal Calendar) GetBody() [][]int {
-	counter := 1
+func (cal Calendar) Body() [][]int {
+	dayCounter := 1
 	table := make([][]int, cal.Rows)
 
 	for i := 0; i < cal.Rows; i++ {
 		table[i] = make([]int, cal.Cols)
 
 		for j := 0; j < cal.Cols; j++ {
-			if i == 0 && j < cal.StartDay-1 || counter > cal.TotalDays {
+			if (i == 0 && j < cal.StartDay) || dayCounter > cal.TotalDays {
 				table[i][j] = 0
 			} else {
-				table[i][j] = counter
-				counter++
+				table[i][j] = dayCounter
+				dayCounter++
 			}
 		}
 	}
